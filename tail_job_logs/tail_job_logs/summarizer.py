@@ -26,11 +26,14 @@ class Task(object):
 
 
 class Summarizer(object):
-    def __init__(self, logdata, label=None, include_crunchstat_summary=False, follow=False):
+    def __init__(self, logdata, label=None, include_crunchstat_summary=False,
+        follow=False, task=None, ignore_regex=None):
         self._logdata = logdata
 
         self.label = label
         self._include_crunchstat_summary = include_crunchstat_summary
+        self._task_to_print = task
+        self._ignore_regex = ignore_regex
 
         self.seq_to_uuid = {}
         self.tasks = collections.defaultdict(Task)
@@ -83,10 +86,15 @@ class Summarizer(object):
                 self.label = m.group('job_uuid')
                 logger.debug('%s: using job uuid as label', self.label)
 
+            if self._ignore_regex is not None:
+                inner_m = re.search(self._ignore_regex, m.group('log_entry'))
+                if inner_m:
+                    continue
+
             task_id = self.seq_to_uuid[int(m.group('seq'))]
             task = self.tasks[task_id]
-
-            logger.info('[%s] %s', m.group('seq'), m.group('log_entry'))
+            if self._task_to_print == None or self._task_to_print == m.group('seq'):
+                logger.info('[%s] %s', m.group('seq'), m.group('log_entry'))
 
         logger.debug('%s: done parsing', self.label)
 
